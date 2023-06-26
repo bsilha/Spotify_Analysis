@@ -66,35 +66,22 @@ def analysis_page():
     # create a Spotipy instance with the access token
     sp = spotipy.Spotify(auth=token_info['access_token'])
 
-    # Retrieve a list of your top artists or tracks using the "Get User's Top Items" endpoint. This will give you an idea of the genres and styles of music you enjoy the most.
-    current_playlists =  sp.current_user_playlists()['items']
+#Variabe for "work and chill" playlist
+work_and_chill_playlist_id = "5kybzijTO74Rr1PWrQEN7W"
 
-    for playlist in current_playlists:
-        if(playlist['name'] == 'work and chill'):
-            work_and_chill_playlist_id = playlist['id']
-    
-    if not work_and_chill_playlist_id:
-        return 'playlist not found'
-    
-    work_and_chill_playlist = sp.playlist_items(work_and_chill_playlist_id)
-    song_ids = []
-    for song in work_and_chill_playlist['items']:
-        song_id= song['track']['id']
-        song_ids.append(song_id)
+#Define a function to obtain the music IDs which would help to obtain information such as the name, album, artist etc.
+def getTrackIDs(user, playlist_id):
+    track_ids = []
+    album = sp.user_playlist(user, playlist_id)
+    for item in album['tracks']['items']:
+        track = item['track']
+        track_ids.append(track['id'])
 
-    #Take the song ids from "work and chill" playlist and get audio features
-    audio_features = sp.audio_features(song_ids)
+    return track_ids
 
-    # #Make variables from different audio features
-    # acousticness = []
-    # for song in audio_features['audio_features']:
-    #     acousticness_value = song['acousticness']
-    #     acousticness.append(acousticness_value)
-
-        
-    
-        # return a success message
-    return(acousticness)
+track_ids = getTrackIDs('spotify', work_and_chill_playlist_id)
+print(len(track_ids))
+print(track_ids)
 
 # function to get the token info from the session
 def get_token():
