@@ -66,22 +66,66 @@ def analysis_page():
     # create a Spotipy instance with the access token
     sp = spotipy.Spotify(auth=token_info['access_token'])
 
-#Variabe for "work and chill" playlist
-work_and_chill_playlist_id = "5kybzijTO74Rr1PWrQEN7W"
+    # get the user's playlists
+    current_playlists =  sp.current_user_playlists()['items']
+    work_and_chill_playlist_id = None
 
-#Define a function to obtain the music IDs which would help to obtain information such as the name, album, artist etc.
-def getTrackIDs(user, playlist_id):
-    track_ids = []
-    album = sp.user_playlist(user, playlist_id)
-    for item in album['tracks']['items']:
-        track = item['track']
-        track_ids.append(track['id'])
+    # find the work and chill playlist
+    for playlist in current_playlists:
+        if(playlist['name'] == 'work and chill'):
+            work_and_chill_playlist_id = playlist['id']
 
-    return track_ids
+    # if the work and chill playlist is not found, return an error message
+    if not work_and_chill_playlist_id:
+        return 'playlist not found'
+    
+    user_id = sp.current_user()['id']
 
-track_ids = getTrackIDs('spotify', work_and_chill_playlist_id)
-print(len(track_ids))
-print(track_ids)
+    # get the tracks from work and chill playlist
+    work_and_chill_playlist = sp.playlist_items(work_and_chill_playlist_id)
+    song_uris = []
+    for song in work_and_chill_playlist['items']:
+        song_uri= song['track']['uri']
+        song_uris.append(song_uri)
+
+    def GetTrackIDs(user_id, work_and_chill_playlist_id):
+        track_ids = []
+        album = sp.user_playlist(user_id, work_and_chill_playlist_id)
+        for item in album['tracks']['items']:
+            track = item['track']
+            track_ids.append(track['id'])
+        return track_ids
+    
+    #list of track ids from work and chill playlist
+    track_ids = GetTrackIDs(user_id, work_and_chill_playlist_id)
+
+    #extracting the features of the tracks in this playlist with a return statement to end the execution of the function call
+    def getPlaylistFeatures(user_id, track_ids):
+        track_info = sp.tracks(user_id, track_ids)
+        return track_info
+    
+    #Track info
+        # name = track_info['name']
+        # album = track_info['album']['name']
+        # artist = track_info['album']['artist'][0]['name']
+        # release_date = track_info['album']['release_date']
+        # length = track_info['duration_ms']
+        # popularity = track_info['popularity']
+
+    # #Track Features
+    #     acousticness = features_info[0]['acousticness']
+    #     danceability = features_info[0]['danceability']
+    #     energy = features_info[0]['energy']
+    #     instrumentalness = features_info[0]['instrumentalness']
+    #     liveness = features_info[0]['liveness']
+    #     loudness = features_info[0]['loudness']
+    #     speechiness = features_info[0]['speechiness']
+    #     tempo = features_info[0]['tempo']
+    #     time_signature = features_info[0]['time_signature']
+
+    
+    # # return a success message
+    return('successful')
 
 # function to get the token info from the session
 def get_token():
