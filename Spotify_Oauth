@@ -1,0 +1,124 @@
+# Steps:
+# Register an application with the Spotify Developer Dashboard to obtain the required credentials to access the Spotify API.
+
+# Use the Spotify API to authenticate and authorize access to your Spotify account. This will allow the application to retrieve data about your music taste.
+
+# Retrieve a list of your top artists or tracks using the "Get a User's Top Artists and Tracks" endpoint. This will give you an idea of the genres and styles of music you enjoy the most.
+
+# Use the "Get Audio Features for a Track" endpoint to retrieve audio features for each of your top tracks. This will give you information on characteristics such as danceability, energy, and tempo.
+
+# Analyze the data collected in steps 3 and 4 to identify patterns and trends in your music taste. You could use tools like Python and its libraries (such as Pandas and Matplotlib) to manipulate and visualize the data.
+
+# Use the data analysis to create personalized playlists or recommendations for yourself or others, based on your music taste.
+
+
+# import necessary modules
+import time
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
+from flask import Flask, request, url_for, session, redirect
+
+# initialize Flask app
+app = Flask(__name__)
+
+# set the name of the session cookie
+app.config['SESSION_COOKIE_NAME'] = 'Spotify Cookie'
+
+# set a random secret key to sign the cookie
+app.secret_key = 'YOUR_SECRET_KEY'  # secure digital signature for session
+
+# set the key for the token info in the session dictionary
+TOKEN_INFO = "token info"
+
+# Route 1: Home route
+@app.route('/')
+def login():
+    # create a SpotifyOAuth instance and get the authorization URL
+    auth_url = create_spotify_oauth().get_authorize_url()
+    # redirect the user to the authorization URL
+    return redirect(auth_url)
+
+# Route 2: Redirect route
+@app.route('/redirect')
+def redirect_page():
+    # clear the session
+    session.clear()
+    # get the authorization code from the request parameters
+    code = request.args.get('code')
+    # exchange the authorization code for an access token and refresh token
+    token_info = create_spotify_oauth().get_access_token(code)
+    # save the token info in the session
+    session[TOKEN_INFO] = token_info
+    # redirect the user to the analysis page route
+    return redirect(url_for('analysis_page',_external=True))
+
+# route to save the Discover Weekly songs to a playlist
+@app.route('/analysis')
+def analysis_page():
+    try: 
+        # get the token info from the session
+        token_info = get_token()
+    except:
+        # if the token info is not found, redirect the user to the login route
+        print('User not logged in')
+        return redirect("/")
+    
+    # create a Spotipy instance with the access token
+    sp = spotipy.Spotify(auth=token_info['access_token'])
+
+    # Retrieve a list of your top artists or tracks using the "Get User's Top Items" endpoint. This will give you an idea of the genres and styles of music you enjoy the most.
+    current_playlists =  sp.current_user_playlists()['items']
+
+    for playlist in current_playlists:
+        if(playlist['name'] == 'work and chill'):
+            work_and_chill_playlist_id = playlist['id']
+    
+    if not work_and_chill_playlist_id:
+        return 'playlist not found'
+    
+    work_and_chill_playlist = sp.playlist_items(work_and_chill_playlist_id)
+    song_ids = []
+    for song in work_and_chill_playlist['items']:
+        song_id= song['track']['id']
+        song_ids.append(song_id)
+
+    #Take the song ids from "work and chill" playlist and get audio features
+    audio_features = sp.audio_features(song_ids)
+
+    # #Make variables from different audio features
+    # acousticness = []
+    # for song in audio_features['audio_features']:
+    #     acousticness_value = song['acousticness']
+    #     acousticness.append(acousticness_value)
+
+        
+    
+        # return a success message
+    return(acousticness)
+
+# function to get the token info from the session
+def get_token():
+    token_info = session.get(TOKEN_INFO, None)
+    if not token_info:
+        # if the token info is not found, redirect the user to the login route
+        redirect(url_for('login', _external=False))
+
+    # check if the token is expired and refresh it if necessary
+    now = int(time.time())
+
+    is_expired = token_info['expires_at'] - now < 60
+    if(is_expired):
+        spotify_oauth = create_spotify_oauth()
+        token_info = spotify_oauth.refresh_access_token(token_info['refresh_token'])
+
+    return token_info
+
+def create_spotify_oauth():
+    return SpotifyOAuth(
+        client_id='cf5abc17078f471cb6ff56d8f27d5a42',
+        client_secret='a35bffa56506448baa63bbd1749671a3',
+        redirect_uri=url_for('redirect_page', _external=True),
+        scope='user-library-read playlist-modify-public playlist-modify-private'
+    )
+
+app.run(debug=True)
